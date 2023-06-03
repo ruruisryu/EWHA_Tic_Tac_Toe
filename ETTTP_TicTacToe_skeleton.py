@@ -13,6 +13,7 @@ import random
 import tkinter as tk
 from socket import *
 import _thread
+import re
 
 SIZE = 1024
 
@@ -216,9 +217,9 @@ class TTT(tk.Tk):
         ###################  Fill Out  #######################
         msg = "message"  # get message using socket
 
-        msg_valid_check = False
+        msg_valid_check = check_msg(msg, self)
 
-        if msg_valid_check:  # Message is not valid
+        if not msg_valid_check:  # Message is not valid
             self.socket.close()
             self.quit()
             return
@@ -341,8 +342,6 @@ a        Check if the selected location is already taken or not
             self.cell[i]['bg'] = 'red'
 
     # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-
 # End of Root class
 
 def check_msg(msg, recv_ip):
@@ -350,6 +349,37 @@ def check_msg(msg, recv_ip):
     Function that checks if received message is ETTTP format
     '''
     ###################  Fill Out  #######################
+    split_msg = msg.split("\r\n")
 
-    return True
+    msg_type = split_msg[0].split(" ")[0]
+    protocol_ver = split_msg[0].split(" ")[1]
+    check_ip = split_msg[1][split_msg[1].find(":") + 1:]
+
+    # 프로토콜 버전 체크
+    if protocol_ver != "ETTTP/1.0":
+        return False
+    # ip 체크
+    if check_ip != recv_ip:
+        return False
+
+    res_msg = [msg_type]
+
+    if msg_type == "SEND" or msg_type == "ACK":
+        if split_msg[2].find("New-Move:") != -1:
+            split_msg[2] = split_msg[2].replace("New-Move:", "")
+        elif split_msg[2].find("First-Move:") != -1:
+            split_msg[2] = split_msg[2].replace("First-Move:", "")
+        else:
+            return False
+        res_msg = res_msg + re.findall(r'\d+', split_msg[2])
+
+    elif msg_type == "RESULT":
+        if split_msg[2].find("Winner:") != -1:
+            split_msg[2] = split_msg[2].replace("Winner:", "")
+            res_msg.append(split_msg[2])
+        else:
+            return False
+
+    return res_msg;
+
     ######################################################
