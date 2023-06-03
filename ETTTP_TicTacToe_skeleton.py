@@ -114,7 +114,6 @@ class TTT(tk.Tk):
         self.b_debug = tk.Button(self.debug_frame,text="Send",command=self.send_debug)
         self.b_debug.pack(side=tk.RIGHT)
         #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-        
     
     def create_board_frame(self):
         '''
@@ -217,8 +216,8 @@ class TTT(tk.Tk):
         '''
         ###################  Fill Out  #######################
         # get message using socket 
-        msg = self.socket.recv(SIZE).decode() # 소켓에서 읽어온 메기지
-        msg_info = check_msg(msg, self.recv_ip)        
+        msg = self.socket.recv(SIZE).decode() # 소켓에서 읽어온 메시지
+        msg_info = self.check_send_format(msg)
 
         if msg_info == False:  # Message is not valid
             self.socket.close()
@@ -230,7 +229,7 @@ class TTT(tk.Tk):
             self.socket.send(str(ack).encode("utf-8"))
 
             loc = int(msg_info[1])*3 + int(msg_info[2])
-        ######################################################
+            ######################################################
             
             
             #vvvvvvvvvvvvvvvvvvv  DO NOT CHANGE  vvvvvvvvvvvvvvvvvvv
@@ -241,7 +240,6 @@ class TTT(tk.Tk):
                 self.l_status ['text'] = ['Ready']
             #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
                 
-
     def send_debug(self):
         '''
         Function to send message to peer using input from the textbox
@@ -260,22 +258,39 @@ class TTT(tk.Tk):
         ###################  Fill Out  #######################
         '''
         Check if the selected location is already taken or not
-        # 이것도 해야된다고오옥
         '''
+        split_msg = d_msg.split("\r\n")
+        if split_msg[2].find("New-Move:") != -1:
+            split_msg[2] = split_msg[2].replace("New-Move:", "")
+            msg_info = re.findall(r'\d+', split_msg[2])
 
+        loc = int(msg_info[0]) * 3 + int(msg_info[1])
+        
+        if self.board[loc] != 0:
+            return
+        
+        '''
+        보내는 메시지의 형식이 맞는지 확인
+        '''
+        msg_info = self.check_send_format(d_msg)
+
+        if msg_info == False:  # Message is not valid
+            self.socket.close()
+            self.quit()
+            return
+        
         '''
         Send message to peer
-        # 메시지 보내기
         '''
         self.socket.send(str(d_msg).encode())
         
         '''
         Get ack
-        # ACK 기다리기, input에서 move 가져오기
         '''
         ack = self.socket.recv(SIZE).decode()
-        
-        loc = 5 # peer's move, from 0 to 8
+        valid = self.check_ack_format(ack)
+        if not valid:
+            self.quit()
 
         ######################################################  
         
@@ -290,7 +305,6 @@ class TTT(tk.Tk):
             
         #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
         
-        
     def send_move(self,selection):
         '''
         Function to send message to peer using button click
@@ -303,11 +317,10 @@ class TTT(tk.Tk):
         send = self.create_send(row, col)
         self.socket.send(str(send).encode())
         
-        # ACK 확인, 안 오면 게임종료?
+        # ACK 확인
         ack = self.socket.recv(SIZE).decode()
-        return self.check_ack(ack)
-        ######################################################  
-
+        return self.check_ack_format(ack)
+        ######################################################      
     
     def check_result(self,winner,get=False):
         '''
@@ -316,18 +329,35 @@ class TTT(tk.Tk):
         '''
         # no skeleton
         ###################  Fill Out  #######################
-
         # if get == False: 위너, result 주는 게 먼저, 이후 받음
-        if get == False: 
-            return;
-            
-        # if get == True: 루저, result 받는 게 먼저, 이후 줌
-        if get == True:
-            return;
+        if not get:
+            # winner = ME
+            result_send = self.create_result(winner)
+            self.socket.send(str(result_send).encode())
 
-        return True
-        ######################################################  
+            result_receive = self.socket.recv(SIZE).decode()
+            result_receive_info = self.check_result_format(result_receive)
+            if result_receive_info == False:
+                return False
+            elif result_receive_info[1] == 'YOU':
+                return True
+            else:
+                return False
+        else:
+            # winner = YOU
+            result_receive = self.socket.recv(SIZE).decode()
+            result_receive_info = self.check_result_format(result_receive)
+            if result_receive_info == False:
+                return False
 
+            result_send = self.create_result(winner)
+            self.socket.send(str(result_send).encode())
+
+            if result_receive_info[1] == 'ME':
+                return True
+            else:
+                return False
+        ######################################################           
         
     #vvvvvvvvvvvvvvvvvvv  DO NOT CHANGE  vvvvvvvvvvvvvvvvvvv
     def update_board(self, player, move, get=False):
@@ -377,22 +407,36 @@ class TTT(tk.Tk):
         ack = f"ACK ETTTP/1.0\r\nHost:{self.send_ip}\r\n{received}\r\n\r\n"
         return ack
 
-    def create_result(self, win):
-        winner = "ME" if win == self.myID else "YOU"
+    def create_result(self, winner):
         result = f"RESULT ETTTP/1.0\r\nHost:{self.send_ip}\r\nWinner:{winner}\r\n\r\n"
         return result
-
-    def check_ack(self, ack):
+    
+    def check_ack_format(self, ack):
         ack_info = check_msg(ack, self.recv_ip)
         if ack_info == False:
             return False
         elif ack_info[0] != 'ACK':
             return False
         else:
-            return True
-    #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    
+            return ack_info
 
+    def check_result_format(self, result):
+        result_info = check_msg(result, self.recv_ip)
+        if result_info == False:
+            return False
+        elif result_info[0] != 'RESULT':
+            return False
+        else:
+            return result_info
+        
+    def check_send_format(self, send):
+        send_info = check_msg(send, self.recv_ip)
+        if send_info == False:
+            return False
+        elif send_info[0] != 'SEND':
+            return False
+        else:
+            return send_info
 # End of Root class
 
 def check_msg(msg, recv_ip):
