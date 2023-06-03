@@ -230,8 +230,7 @@ class TTT(tk.Tk):
             self.socket.send(str(ack).encode("utf-8"))
 
             loc = int(msg_info[1])*3 + int(msg_info[2])
-            
-            ######################################################   
+        ######################################################
             
             
             #vvvvvvvvvvvvvvvvvvv  DO NOT CHANGE  vvvvvvvvvvvvvvvvvvv
@@ -306,8 +305,7 @@ class TTT(tk.Tk):
         
         # ACK 확인, 안 오면 게임종료?
         ack = self.socket.recv(SIZE).decode()
-        
-        return True # ACK valid 여부
+        return self.check_ack(ack)
         ######################################################  
 
     
@@ -321,11 +319,11 @@ class TTT(tk.Tk):
 
         # if get == False: 위너, result 주는 게 먼저, 이후 받음
         if get == False: 
-            return
+            return;
             
         # if get == True: 루저, result 받는 게 먼저, 이후 줌
         if get == True:
-            return
+            return;
 
         return True
         ######################################################  
@@ -384,6 +382,14 @@ class TTT(tk.Tk):
         result = f"RESULT ETTTP/1.0\r\nHost:{self.send_ip}\r\nWinner:{winner}\r\n\r\n"
         return result
 
+    def check_ack(self, ack):
+        ack_info = check_msg(ack, self.recv_ip)
+        if ack_info == False:
+            return False
+        elif ack_info[0] != 'ACK':
+            return False
+        else:
+            return True
     #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     
 
@@ -395,6 +401,9 @@ def check_msg(msg, recv_ip):
     '''
     ###################  Fill Out  #######################
     split_msg = msg.split("\r\n")
+
+    if len(split_msg) != 5:
+        return False
 
     msg_type = split_msg[0].split(" ")[0]
     protocol_ver = split_msg[0].split(" ")[1]
@@ -427,21 +436,3 @@ def check_msg(msg, recv_ip):
 
     return res_msg;
     ######################################################
-
-"""
-def check_msg(msg, recv_ip):
-    
-    ###################  Fill Out  #######################
-    '''
-    ETTP가 맞는지 확인! 
-    - ETTP 1.0이 맞는지
-    - IP 확인
-    띄어쓰기, 대소문자, 철자 다른 건 ㄱㅊ
-    '''
-    
-
-
-    return True
-    ######################################################  
-
-"""
