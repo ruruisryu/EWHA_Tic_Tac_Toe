@@ -14,7 +14,7 @@ import tkinter as tk
 from socket import *
 import _thread
 
-from ETTTP_TicTacToe_skeleton import TTT, check_msg
+from ETTTP_TicTacToe import TTT, check_msg
     
 
 
@@ -32,11 +32,17 @@ if __name__ == '__main__':
         
         ###################################################################
         # Receive who will start first from the server
-        start = 1;
-    
+        msg = client_socket.recv(SIZE).decode()
+
+        split_msg = msg.split("\r\n")
+        start_player = split_msg[2][split_msg[2].find(":") + 1:]
+        start = 1 if start_player == "YOU" else 0
+
         ######################### Fill Out ################################
         # Send ACK 
+        ack = f"ACK ETTTP/1.0\r\nHost:{MY_IP}\r\nFirst-Move:{start_player}\r\n\r\n"
         
+        client_socket.send(str(ack).encode())
         
         ###################################################################
         
@@ -45,3 +51,5 @@ if __name__ == '__main__':
         root.play(start_user=start)
         root.mainloop()
         client_socket.close()
+        
+        
