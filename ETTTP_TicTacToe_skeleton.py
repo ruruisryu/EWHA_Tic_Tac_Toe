@@ -214,28 +214,34 @@ class TTT(tk.Tk):
         If is not, close socket and quit
         '''
         ###################  Fill Out  #######################
-        msg = "message"  # get message using socket
+        # get message using socket 
+        msg =  self.socket.recv(SIZE).decode() # 소켓에서 읽어온 메기지
 
-        msg_valid_check = False
-
-        if msg_valid_check:  # Message is not valid
-            self.socket.close()
+        msg_valid_check = check_msg(msg) # ETTP 확인
+         
+        if msg_valid_check: # Message is not valid
+            self.socket.close()   
             self.quit()
             return
         else:  # If message is valid - send ack, update board and change turn
+            
+            # ACK 보내기
+            ack = create_ack(msg);
+            self.socket.send(str(ack).encode("utf-8"))
 
-            loc = 5  # received next-move
-
-            ######################################################
-
-            # vvvvvvvvvvvvvvvvvvv  DO NOT CHANGE  vvvvvvvvvvvvvvvvvvv
+            loc = 5 # received next-move 가져오기 TODO
+            
+            ######################################################   
+            
+            
+            #vvvvvvvvvvvvvvvvvvv  DO NOT CHANGE  vvvvvvvvvvvvvvvvvvv
             self.update_board(self.computer, loc, get=True)
-            if self.state == self.active:
+            if self.state == self.active:  
                 self.my_turn = 1
                 self.l_status_bullet.config(fg='green')
-                self.l_status['text'] = ['Ready']
-            # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
+                self.l_status ['text'] = ['Ready']
+            #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                
     def send_debug(self):
         '''
         Function to send message to peer using input from the textbox
@@ -352,4 +358,25 @@ def check_msg(msg, recv_ip):
     ###################  Fill Out  #######################
 
     return True
+
     ######################################################
+
+def create_start(self, start):
+    start_player = "ME" if start % 2 == 0 else "YOU"
+    start = f"SEND ETTTP/1.0\r\nHost:{self.send_ip}\r\nFirst-Move:{start_player}\r\n\r\n"
+    return start
+
+def create_send(self, row, col):
+    send = f"SEND ETTTP/1.0\r\nHost:{self.send_ip}\r\nNew-Move:({row}, {col})\r\n\r\n"
+    return send
+
+def create_ack(self, msg):
+    split_string = msg.split("\r\n")  # 문자열을 개행 문자("\r\n")를 기준으로 분할
+    received = split_string[2] # 받은 내용
+    ack = f"ACK ETTTP/1.0\r\nHost:{self.send_ip}\r\n{received}\r\n\r\n"
+    return ack
+
+def create_result(self, win):
+    winner = "ME" if win == self.myID else "YOU"
+    result = f"RESULT ETTTP/1.0\r\nHost:{self.send_ip}\r\nWinner:{winner}\r\n\r\n"
+    return result
