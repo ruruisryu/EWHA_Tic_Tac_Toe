@@ -32,14 +32,23 @@ if __name__ == '__main__':
         # Receive who will start first from the server
         msg = client_socket.recv(SIZE).decode()
 
-        split_msg = msg.split("\r\n")
-        start_player = split_msg[2][split_msg[2].find(":") + 1:]
-        start = 1 if start_player == "YOU" else 0
+        # 메세지를 체크해서 유효하지 않다면 QUit
+        msg_info = check_msg(msg, MY_IP)
+        if msg_info == False:
+            client_socket.close()
+            TTT.quit()
+
+        # start_player 설정
+        if msg_info[1] == 'YOU':
+            start_player = msg_info[1]
+            start = 1
+        else:
+            start_player = msg_info[1]
+            start = 0
 
         ######################### Fill Out ################################
         # Send ACK 
         ack = f"ACK ETTTP/1.0\r\nHost:{MY_IP}\r\nFirst-Move:{start_player}\r\n\r\n"
-        
         client_socket.send(str(ack).encode())
         
         ###################################################################

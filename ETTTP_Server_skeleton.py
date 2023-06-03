@@ -34,15 +34,22 @@ if __name__ == '__main__':
         
         ###################################################################
         # Send start move information to peer
-        start_player = "ME" if start % 2 == 0 else "YOU"
+        if start == 0:
+            start_player = "ME"
+        else:
+            start_player = "YOU"
+        # First Player에 대한 SEND 메세지 만들어 전송
         msg=f"SEND ETTTP/1.0\r\nHost:{MY_IP}\r\nFirst-Move:{start_player}\r\n\r\n"
-        
-    
         client_socket.send(str(msg).encode())
     
         ######################### Fill Out ################################
         # Receive ack - if ack is correct, start game
         ack = client_socket.recv(SIZE).decode()
+        # ACK가 유효하지 않다면 Quit
+        ack_info = check_msg(ack, MY_IP)
+        if ack_info == False:
+            client_socket.close()
+            TTT.quit()
         
         ###################################################################
         
