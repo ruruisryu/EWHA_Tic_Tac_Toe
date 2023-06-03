@@ -245,31 +245,33 @@ class TTT(tk.Tk):
                 self.l_status ['text'] = ['Ready']
             #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
                 
+    # 입력창으로 디버그 메시지 보내기
     def send_debug(self):
         '''
         Function to send message to peer using input from the textbox
         Need to check if this turn is my turn or not
         '''
 
-        if not self.my_turn:
-            self.t_debug.delete(1.0,"end")
-            return
+        if not self.my_turn:               # 사용자의 턴이 아닌데 디버그 메시지를 보냈다면
+            self.t_debug.delete(1.0,"end") # 입력창 지우기
+            return                         # 함수 종료
         
         # get message from the input box
-        d_msg = self.t_debug.get(1.0,"end")
-        d_msg = d_msg.replace("\\r\\n","\r\n")   # msg is sanitized as \r\n is modified when it is given as input
+        d_msg = self.t_debug.get(1.0,"end")    # 입력창에서 메시지 가져오기
+        d_msg = d_msg.replace("\\r\\n","\r\n") # msg is sanitized as \r\n is modified when it is given as input
         self.t_debug.delete(1.0,"end")
         
         ###################  Fill Out  #######################
         '''
         Check if the selected location is already taken or not
+        이미 차지된 자리인지 확인하기
         '''
-        split_msg = d_msg.split("\r\n")
-        if split_msg[2].find("New-Move:") != -1:
+        split_msg = d_msg.split("\r\n") # 메세지를 적절하게 분할
+        if split_msg[2].find("New-Move:") != -1: # New-Move:를 제거하고 좌표 값의 숫자만 남김
             split_msg[2] = split_msg[2].replace("New-Move:", "")
             msg_info = re.findall(r'\d+', split_msg[2])
 
-        loc = int(msg_info[0]) * 3 + int(msg_info[1])
+        loc = int(msg_info[0]) * 3 + int(msg_info[1]) # 보드에서 자리 확인 
         
         if self.board[loc] != 0:
             return
@@ -277,20 +279,20 @@ class TTT(tk.Tk):
         '''
         Send message to peer
         '''
-        self.socket.send(str(d_msg).encode())
+        self.socket.send(str(d_msg).encode()) # 디버그 메시지 인코딩하여 소켓에 전송
         
         '''
         Get ack
         '''
-        ack = self.socket.recv(SIZE).decode()
-        valid = self.check_ack_format(ack)
-        if not valid:
-            self.quit()
+        ack = self.socket.recv(SIZE).decode() # 소켓에서 ACK 메시지 받기
+        valid = self.check_ack_format(ack)    # ACK 메시지가 형식에 맞는지 확인
+        if not valid:   # 유효하지 않으면
+            self.quit() # 게임 종료
 
         ######################################################  
         
         #vvvvvvvvvvvvvvvvvvv  DO NOT CHANGE  vvvvvvvvvvvvvvvvvvv
-        self.update_board(self.user, loc)
+        self.update_board(self.user, loc) # 보드 정보 업데이트
             
         if self.state == self.active:    # always after my move
             self.my_turn = 0
@@ -300,22 +302,23 @@ class TTT(tk.Tk):
             
         #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
         
+    # 화면의 버튼을 누르면 선택지를 전송하는 함수
     def send_move(self,selection):
         '''
         Function to send message to peer using button click
         selection indicates the selected button
         '''
-        row,col = divmod(selection,3)
+        row,col = divmod(selection,3) # selection을 3으로 나눈 몫과 나머지
         ###################  Fill Out  #######################
 
         # send message and check ACK
-        send = self.create_send(row, col)
-        self.socket.send(str(send).encode())
+        send = self.create_send(row, col)    # row, col에 따라 SEND 메시지 생성
+        self.socket.send(str(send).encode()) # 메시지 인코딩하여 소켓에 전송
         
         # ACK 확인
-        ack = self.socket.recv(SIZE).decode()
-        return self.check_ack_format(ack)
-        ######################################################      
+        ack = self.socket.recv(SIZE).decode() # 소켓에서 ACK 메시지 받기
+        return self.check_ack_format(ack)     # ACK 메시지가 형식에 맞는지 여부 반환
+        ######################################################          
     
     def check_result(self,winner,get=False):
         '''
@@ -401,16 +404,19 @@ class TTT(tk.Tk):
         for i in line:
             self.cell[i]['bg'] = 'red'
 
+    # SEND 메시지 작성하기
     def create_send(self, row, col):
         send = f"SEND ETTTP/1.0\r\nHost:{self.send_ip}\r\nNew-Move:({row}, {col})\r\n\r\n"
         return send
 
+    # ACK 메시지 작성하기
     def create_ack(self, msg):
         split_string = msg.split("\r\n")  # 문자열을 개행 문자("\r\n")를 기준으로 분할
         received = split_string[2] # 받은 내용
         ack = f"ACK ETTTP/1.0\r\nHost:{self.send_ip}\r\n{received}\r\n\r\n"
         return ack
 
+    # RESULT 메시지 작성하기
     def create_result(self, winner):
         result = f"RESULT ETTTP/1.0\r\nHost:{self.send_ip}\r\nWinner:{winner}\r\n\r\n"
         return result
