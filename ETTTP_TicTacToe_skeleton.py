@@ -215,21 +215,26 @@ class TTT(tk.Tk):
         If is not, close socket and quit
         '''
         ###################  Fill Out  #######################
-        # get message using socket 
-        msg = self.socket.recv(SIZE).decode() # 소켓에서 읽어온 메시지
+
+        # 소켓으로 상대방이 둔 위치 메세지를 받아온다.
+        msg = self.socket.recv(SIZE).decode()
+        #SEND format으로 잘 구성되었는지 check
         msg_info = self.check_send_format(msg)
 
-        if msg_info == False:  # Message is not valid
+        # msg_info가 false라면 msg가 올바른 구성이 아니므로 quit
+        if msg_info == False:
             self.socket.close()
             self.quit()
             return
-        else:  # If message is valid - send ack, update board and change turn
+        # msg가 유효하다면 msg_info는 ['SEND',row, col]
+        else:
             # ACK 보내기
             ack = self.create_ack(msg);
             self.socket.send(str(ack).encode("utf-8"))
 
+            # 표시할 좌표 계산
             loc = int(msg_info[1])*3 + int(msg_info[2])
-            ######################################################
+        ######################################################
             
             
             #vvvvvvvvvvvvvvvvvvv  DO NOT CHANGE  vvvvvvvvvvvvvvvvvvv
@@ -322,27 +327,36 @@ class TTT(tk.Tk):
         # if get == False: 위너, result 주는 게 먼저, 이후 받음
         if not get:
             # winner = ME
+            # result message 만들어서 보냄
             result_send = self.create_result(winner)
             self.socket.send(str(result_send).encode())
 
+            # 상대방이 보내는 result message 받아서
             result_receive = self.socket.recv(SIZE).decode()
+
+            # 유효한지 확인한 후
             result_receive_info = self.check_result_format(result_receive)
             if result_receive_info == False:
                 return False
+            # result가 같은지 확인해서 결과 반환
             elif result_receive_info[1] == 'YOU':
                 return True
             else:
                 return False
         else:
             # winner = YOU
+            # 상대방이 보내는 result message 받아서
             result_receive = self.socket.recv(SIZE).decode()
+            # 유효한지 확인한 후
             result_receive_info = self.check_result_format(result_receive)
             if result_receive_info == False:
                 return False
 
+            # 나의 result 만들어서 send
             result_send = self.create_result(winner)
             self.socket.send(str(result_send).encode())
 
+            # result가 같은지 확인해서 결과 반환
             if result_receive_info[1] == 'ME':
                 return True
             else:
@@ -400,29 +414,38 @@ class TTT(tk.Tk):
     def create_result(self, winner):
         result = f"RESULT ETTTP/1.0\r\nHost:{self.send_ip}\r\nWinner:{winner}\r\n\r\n"
         return result
-    
+
+    # ack message가 유효한 메세지인지 check
     def check_ack_format(self, ack):
+        # ETTTP 형식에 맞는지 확인
         ack_info = check_msg(ack, self.recv_ip)
         if ack_info == False:
             return False
+        # ACK 형식이 맞는지 확인
         elif ack_info[0] != 'ACK':
             return False
         else:
             return ack_info
 
+    # result message가 유효한 메세지인지 check
     def check_result_format(self, result):
+        # ETTTP 형식에 맞는지 확인
         result_info = check_msg(result, self.recv_ip)
         if result_info == False:
             return False
+        # RESULT 형식이 맞는지 확인
         elif result_info[0] != 'RESULT':
             return False
         else:
             return result_info
-        
+
+    # send message가 유효한 메세지인지 check
     def check_send_format(self, send):
+        # ETTTP 형식에 맞는지 확인
         send_info = check_msg(send, self.recv_ip)
         if send_info == False:
             return False
+        # SEND 형식이 맞는지 확인
         elif send_info[0] != 'SEND':
             return False
         else:
@@ -434,39 +457,50 @@ def check_msg(msg, recv_ip):
     Function that checks if received message is ETTTP format
     '''
     ###################  Fill Out  #######################
+    # 메세지를 적절하게 분할
     split_msg = msg.split("\r\n")
 
+    # 5개 이상으로 분할될 시 \r\n의 개수에 이상이 있는것이므로 False 반환
     if len(split_msg) != 5:
         return False
 
+    # 분할된 문자열들로부터 메세지 종류와 프로토콜 종류, 수신ip를 구한다.
     msg_type = split_msg[0].split(" ")[0]
     protocol_ver = split_msg[0].split(" ")[1]
     check_ip = split_msg[1][split_msg[1].find(":") + 1:]
 
-    # 프로토콜 버전 체크
+    # 프로토콜 체크
     if protocol_ver != "ETTTP/1.0":
         return False
-    # ip 체크
+    # 수신ip 체크
     if check_ip != recv_ip:
         return False
 
+    # 메세지가 유효한 경우 메세지의 info를 담아 반환할 리스트
     res_msg = [msg_type]
 
+    # 메세지 종류가 유효한지 체크하고 메세지 종류에 따라 반환할 값 처리
     if msg_type == "SEND" or msg_type == "ACK":
+        # 메세지 종류가 SEND, ACK라면 New-Move:, First--Move:를 제거하고 좌표 값의 숫자만 남김
         if split_msg[2].find("New-Move:") != -1:
             split_msg[2] = split_msg[2].replace("New-Move:", "")
         elif split_msg[2].find("First-Move:") != -1:
             split_msg[2] = split_msg[2].replace("First-Move:", "")
+        # 메세지 종류가 SEND나 ACK지만 New-Move:, First--Move:를 포함하지 않는다면 False 반환
         else:
             return False
         res_msg = res_msg + re.findall(r'\d+', split_msg[2])
-
+    # 메세지 종류가 RESULT라면
     elif msg_type == "RESULT":
+        # Winner:를 제거하고 좌표값의 숫자만 남김
         if split_msg[2].find("Winner:") != -1:
             split_msg[2] = split_msg[2].replace("Winner:", "")
             res_msg.append(split_msg[2])
+        # 메세지 종류가 RESULT여도 Winner:를 포함하지 않았다면 False
         else:
             return False
+    # 메세지 종류가 SEND, ACK, RESULT 중 아무것도 아니라면 False
+    else: return False
 
     return res_msg;
     ######################################################
