@@ -270,16 +270,6 @@ class TTT(tk.Tk):
             return
         
         '''
-        보내는 메시지의 형식이 맞는지 확인
-        '''
-        msg_info = self.check_send_format(d_msg)
-
-        if msg_info == False:  # Message is not valid
-            self.socket.close()
-            self.quit()
-            return
-        
-        '''
         Send message to peer
         '''
         self.socket.send(str(d_msg).encode())
