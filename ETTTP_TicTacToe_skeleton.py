@@ -219,7 +219,7 @@ class TTT(tk.Tk):
         # 소켓으로 상대방이 둔 위치 메세지를 받아온다.
         msg = self.socket.recv(SIZE).decode()
         #SEND format으로 잘 구성되었는지 check
-        msg_info = self.check_send_format(msg)
+        msg_info = check_send_format(msg, self.recv_ip)
 
         # msg_info가 false라면 msg가 올바른 구성이 아니므로 quit
         if msg_info == False:
@@ -276,16 +276,10 @@ class TTT(tk.Tk):
         if self.board[loc] != 0:
             return
         
-        '''
-        Send message to peer
-        '''
         self.socket.send(str(d_msg).encode()) # 디버그 메시지 인코딩하여 소켓에 전송
         
-        '''
-        Get ack
-        '''
         ack = self.socket.recv(SIZE).decode() # 소켓에서 ACK 메시지 받기
-        valid = self.check_ack_format(ack)    # ACK 메시지가 형식에 맞는지 확인
+        valid = check_ack_format(ack, self.recv_ip)    # ACK 메시지가 형식에 맞는지 확인
         if not valid:   # 유효하지 않으면
             self.quit() # 게임 종료
 
@@ -317,7 +311,7 @@ class TTT(tk.Tk):
         
         # ACK 확인
         ack = self.socket.recv(SIZE).decode() # 소켓에서 ACK 메시지 받기
-        return self.check_ack_format(ack)     # ACK 메시지가 형식에 맞는지 여부 반환
+        return check_ack_format(ack, self.recv_ip)     # ACK 메시지가 형식에 맞는지 여부 반환
         ######################################################          
     
     def check_result(self,winner,get=False):
@@ -338,7 +332,7 @@ class TTT(tk.Tk):
             result_receive = self.socket.recv(SIZE).decode()
 
             # 유효한지 확인한 후
-            result_receive_info = self.check_result_format(result_receive)
+            result_receive_info = check_result_format(result_receive, self.recv_ip)
             if result_receive_info == False:
                 return False
             # result가 같은지 확인해서 결과 반환
@@ -351,7 +345,7 @@ class TTT(tk.Tk):
             # 상대방이 보내는 result message 받아서
             result_receive = self.socket.recv(SIZE).decode()
             # 유효한지 확인한 후
-            result_receive_info = self.check_result_format(result_receive)
+            result_receive_info = check_result_format(result_receive, self.recv_ip)
             if result_receive_info == False:
                 return False
 
@@ -420,35 +414,12 @@ class TTT(tk.Tk):
     def create_result(self, winner):
         result = f"RESULT ETTTP/1.0\r\nHost:{self.send_ip}\r\nWinner:{winner}\r\n\r\n"
         return result
+# End of Root class
 
-    # ack message가 유효한 메세지인지 check
-    def check_ack_format(self, ack):
+# send message가 유효한 메세지인지 check
+def check_send_format(send, recv_ip):
         # ETTTP 형식에 맞는지 확인
-        ack_info = check_msg(ack, self.recv_ip)
-        if ack_info == False:
-            return False
-        # ACK 형식이 맞는지 확인
-        elif ack_info[0] != 'ACK':
-            return False
-        else:
-            return ack_info
-
-    # result message가 유효한 메세지인지 check
-    def check_result_format(self, result):
-        # ETTTP 형식에 맞는지 확인
-        result_info = check_msg(result, self.recv_ip)
-        if result_info == False:
-            return False
-        # RESULT 형식이 맞는지 확인
-        elif result_info[0] != 'RESULT':
-            return False
-        else:
-            return result_info
-
-    # send message가 유효한 메세지인지 check
-    def check_send_format(self, send):
-        # ETTTP 형식에 맞는지 확인
-        send_info = check_msg(send, self.recv_ip)
+        send_info = check_msg(send, recv_ip)
         if send_info == False:
             return False
         # SEND 형식이 맞는지 확인
@@ -456,8 +427,31 @@ class TTT(tk.Tk):
             return False
         else:
             return send_info
-# End of Root class
 
+# ack message가 유효한 메세지인지 check
+def check_ack_format(ack, recv_ip):
+    # ETTTP 형식에 맞는지 확인
+    ack_info = check_msg(ack, recv_ip)
+    if ack_info == False:
+        return False
+    # ACK 형식이 맞는지 확인
+    elif ack_info[0] != 'ACK':
+        return False
+    else:
+        return ack_info
+  
+# result message가 유효한 메세지인지 check  
+def check_result_format(result, recv_ip):
+        # ETTTP 형식에 맞는지 확인
+        result_info = check_msg(result, recv_ip)
+        if result_info == False:
+            return False
+        # RESULT 형식이 맞는지 확인
+        elif result_info[0] != 'RESULT':
+            return False
+        else:
+            return result_info
+        
 def check_msg(msg, recv_ip):
     '''
     Function that checks if received message is ETTTP format
@@ -492,6 +486,7 @@ def check_msg(msg, recv_ip):
             split_msg[2] = split_msg[2].replace("New-Move:", "")
         elif split_msg[2].find("First-Move:") != -1:
             split_msg[2] = split_msg[2].replace("First-Move:", "")
+            res_msg = res_msg + [split_msg[2]]
         # 메세지 종류가 SEND나 ACK지만 New-Move:, First--Move:를 포함하지 않는다면 False 반환
         else:
             return False

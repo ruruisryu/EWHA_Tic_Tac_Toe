@@ -14,7 +14,7 @@ import tkinter as tk
 from socket import *
 import _thread
 
-from ETTTP_TicTacToe_skeleton import TTT, check_msg
+from ETTTP_TicTacToe_skeleton import TTT, check_send_format
 
 if __name__ == '__main__':
 
@@ -29,25 +29,25 @@ if __name__ == '__main__':
         client_socket.connect(SERVER_ADDR)  
         
         ###################################################################
-        # Receive who will start first from the server
+        # 서버로부터 시작 플레이어 정보 받기
         msg = client_socket.recv(SIZE).decode()
-
-        # 메세지를 체크해서 유효하지 않다면 QUit
-        msg_info = check_msg(msg, MY_IP)
+        
+        # 메세지를 체크해서 유효하지 않다면 Quit
+        msg_info = check_send_format(msg, MY_IP)
         if msg_info == False:
             client_socket.close()
             TTT.quit()
 
         # start_player 설정
-        if msg_info[1] == 'YOU':
-            start_player = msg_info[1]
-            start = 1
-        else:
-            start_player = msg_info[1]
+        if msg_info[1] == "ME":  # 시작 플레이어가 서버
+            start_player = "YOU" 
             start = 0
+        else:                    # 시작 플레이어가 클라이언트
+            start_player = "ME"
+            start = 1    
 
         ######################### Fill Out ################################
-        # Send ACK 
+        # ACK 보내기
         ack = f"ACK ETTTP/1.0\r\nHost:{MY_IP}\r\nFirst-Move:{start_player}\r\n\r\n"
         client_socket.send(str(ack).encode())
         

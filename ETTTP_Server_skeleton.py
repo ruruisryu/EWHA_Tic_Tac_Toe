@@ -14,7 +14,7 @@ import tkinter as tk
 from socket import *
 import _thread
 
-from ETTTP_TicTacToe_skeleton import TTT, check_msg
+from ETTTP_TicTacToe_skeleton import TTT, check_ack_format
 
     
 if __name__ == '__main__':
@@ -33,20 +33,19 @@ if __name__ == '__main__':
         start = random.randrange(0,2)   # select random to start
         
         ###################################################################
-        # Send start move information to peer
-        if start == 0:
-            start_player = "ME"
-        else:
-            start_player = "YOU"
+        # start 번호에 따라 시작 플레이어 설정
+        start_player = "ME" if start == 0 else "YOU"
+        
         # First Player에 대한 SEND 메세지 만들어 전송
         msg=f"SEND ETTTP/1.0\r\nHost:{MY_IP}\r\nFirst-Move:{start_player}\r\n\r\n"
         client_socket.send(str(msg).encode())
     
         ######################### Fill Out ################################
-        # Receive ack - if ack is correct, start game
+        # 클라이언트로부터 ACK 받기
         ack = client_socket.recv(SIZE).decode()
+        
         # ACK가 유효하지 않다면 Quit
-        ack_info = check_msg(ack, MY_IP)
+        ack_info = check_ack_format(ack, MY_IP)
         if ack_info == False:
             client_socket.close()
             TTT.quit()
