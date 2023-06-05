@@ -11,6 +11,7 @@
 
 import random
 import tkinter as tk
+from PIL import ImageTk
 from socket import *
 import _thread
 import re
@@ -41,20 +42,23 @@ class TTT(tk.Tk):
             self.myID = 1   #0: server, 1: client
             self.title('34743-02-Tic-Tac-Toe Client')
             self.user = {'value': self.line_size+1, 'bg': 'blue',
-                     'win': 'Result: You Won!', 'text':'O','Name':"ME"}
+                     'win': 'Result: You Won!', 'text':'O','Name':"ME", 'img':'Ryu'}
             self.computer = {'value': 1, 'bg': 'orange',
-                             'win': 'Result: You Lost!', 'text':'X','Name':"YOU"}   
+                             'win': 'Result: You Lost!', 'text':'X','Name':"YOU", 'img':'Kim'}
         else:
             self.myID = 0
             self.title('34743-02-Tic-Tac-Toe Server')
             self.user = {'value': 1, 'bg': 'orange',
-                         'win': 'Result: You Won!', 'text':'X','Name':"ME"}   
+                         'win': 'Result: You Won!', 'text':'X','Name':"ME", 'img':'Kim'}
             self.computer = {'value': self.line_size+1, 'bg': 'blue',
-                     'win': 'Result: You Lost!', 'text':'O','Name':"YOU"}
+                     'win': 'Result: You Lost!', 'text':'O','Name':"YOU", 'img':'Ryu'}
         ##################################################
 
-            
+
+        self.Ryu_img = ImageTk.PhotoImage(file=r'Ryu.jpg')
+        self.Kim_img = ImageTk.PhotoImage(file=r'Kim.jpg')
         self.board_bg = 'white'
+        self.board_img = ImageTk.PhotoImage(file='white.png')
         self.all_lines = ((0, 1, 2), (3, 4, 5), (6, 7, 8),
                           (0, 3, 6), (1, 4, 7), (2, 5, 8),
                           (0, 4, 8), (2, 4, 6))
@@ -134,6 +138,7 @@ class TTT(tk.Tk):
                                     width=5, height=3,
                                     bg=self.board_bg,compound="center",
                                     textvariable=self.setText[i],font=('Helevetica',30,'bold'))
+            self.cell[i].image = self.board_img
             self.cell[i].bind('<Button-1>',
                               lambda e, move=i: self.my_move(e, move))
             r, c = divmod(i, self.line_size)
@@ -371,6 +376,10 @@ class TTT(tk.Tk):
         self.cell[self.last_click]['bg'] = self.board_bg
         self.last_click = move
         self.setText[move].set(player['text'])
+        if player['img'] == 'Ryu':
+            self.cell[move].configure(image=self.Ryu_img)
+        else:
+            self.cell[move].configure(image=self.Kim_img)
         self.cell[move]['bg'] = player['bg']
         self.update_status(player,get=get)
 
